@@ -29,6 +29,7 @@ function authenticateSchema(req: any, res: any, next: any) {
     });
     validateRequest(req, next, schema);
 }
+
 function authenticate(req: any, res: any, next: any) {
     const { email, password } = req.body;
     const ipAddress = req.ip;
@@ -40,8 +41,14 @@ function authenticate(req: any, res: any, next: any) {
         .catch(next);
 }
 
+// ✅ FIX 2: Guard against missing cookie before calling service
 function refreshToken(req: any, res: any, next: any) {
     const token = req.cookies.refreshToken;
+
+    if (!token) {
+        return res.status(401).json({ message: 'No refresh token' });
+    }
+
     const ipAddress = req.ip;
     accountService.refreshToken({ token, ipAddress })
         .then(({ refreshToken, ...account }: any) => {
@@ -57,6 +64,7 @@ function revokeTokenSchema(req: any, res: any, next: any) {
     });
     validateRequest(req, next, schema);
 }
+
 function revokeToken(req: any, res: any, next: any) {
     const token = req.body.token || req.cookies.refreshToken;
     const ipAddress = req.ip;
@@ -90,6 +98,7 @@ function register(req: any, res: any, next: any) {
         .then(() => res.json({ message: 'Registration successful, please check your email for verification instructions' }))
         .catch(next);
 }
+
 function verifyEmailSchema(req: any, res: any, next: any) {
     const schema = Joi.object({
         token: Joi.string().required()
@@ -128,6 +137,7 @@ function validateResetToken(req: any, res: any, next: any) {
         .then(() => res.json({ message: 'Token is valid' }))
         .catch(next);
 }
+
 function resetPasswordSchema(req: any, res: any, next: any) {
     const schema = Joi.object({
         token: Joi.string().required(),
@@ -158,6 +168,7 @@ function getById(req: any, res: any, next: any) {
         .then((account: any) => account ? res.json(account) : res.sendStatus(404))
         .catch(next);
 }
+
 function createSchema(req: any, res: any, next: any) {
     const schema = Joi.object({
         title: Joi.string().required(),
@@ -194,6 +205,7 @@ function updateSchema(req: any, res: any, next: any) {
     const schema = Joi.object(schemaRules).with('password', 'confirmPassword');
     validateRequest(req, next, schema);
 }
+
 function update(req: any, res: any, next: any) {
     if (Number(req.params.id) !== req.user.id && req.user.role !== Role.Admin) {
         return res.status(401).json({ message: 'Unauthorized' });
@@ -214,9 +226,12 @@ function _delete(req: any, res: any, next: any) {
         .catch(next);
 }
 
+// ✅ FIX 3: Add secure + sameSite for cross-origin cookie (Render domains)
 function setTokenCookie(res: any, token: any) {
     const cookieOptions = {
         httpOnly: true,
+        secure: true,
+        sameSite: 'none' as const,
         expires: new Date(Date.now() + 7*24*60*60*1000)
     };
     res.cookie('refreshToken', token, cookieOptions);

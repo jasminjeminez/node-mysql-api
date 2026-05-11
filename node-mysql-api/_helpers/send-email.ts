@@ -1,3 +1,4 @@
+// send-email.ts
 import nodemailer from 'nodemailer';
 
 export default async function sendEmail({ to, subject, html, from = process.env.EMAIL_FROM }: any) {
@@ -14,6 +15,7 @@ export default async function sendEmail({ to, subject, html, from = process.env.
         console.log('Email sent:', info.messageId);
         console.log('Preview URL:', nodemailer.getTestMessageUrl(info));
     } catch (error) {
-        console.error('Email error:', error);
+        console.error('Email error:', error); // ✅ log but don't throw
+        // ✅ Remove "throw error" — don't crash registration
     }
 }
